@@ -37,4 +37,10 @@ enum {
 	IBUS_STATE_CRC
 };
 
+typedef enum{
+	IBUS_READY,
+	IBUS_BUSY,
+	IBUS_ERROR
+}ibusState_e;
+
 #endif /* INC_DRV_IBUS_H_ */

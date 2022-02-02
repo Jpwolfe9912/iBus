@@ -18,12 +18,14 @@ uint16_t ibusRcChannels[RC_CHANNELS];
 uint8_t state, cmd, frameLength, framePos;
 
 void ibus_process(void){
-	while(!ibus_process_frame());
+	while(ibus_process_frame() == IBUS_BUSY);
 }
 
 bool ibus_process_frame(void){
+	ibusState_e status;
 	uint8_t b;
 	if(lwrb_read(&rxRingBuf, &b, 1) == 1){
+		status = IBUS_BUSY;
 		switch(state){
 			case IBUS_STATE_LENGTH: {				// length byte
 				if(b == 0x20){
@@ -31,14 +33,17 @@ bool ibus_process_frame(void){
 					framePos = 0;
 					++state;
 				}
+				else
+					status = IBUS_ERROR;
 				break;
 			}
 			case IBUS_STATE_TYPE: {
 				cmd = b;
-				++state;
-				if(frameLength == 0){
+				if(cmd == 0x40){
 					++state;
 				}
+				else
+					status = IBUS_ERROR;
 				break;
 			}
 			case IBUS_STATE_PAYLOAD: {				// payload bytes
@@ -55,9 +60,11 @@ bool ibus_process_frame(void){
 				if(framePos == 1){
 					if(ibusFrameCRC()){
 						state = 0;
-						return 1;
+						status = IBUS_READY;
 					}
-					else return 0;
+					else{
+						status = IBUS_ERROR;
+					}
 				}
 				else{
 					framePos++;
@@ -66,7 +73,7 @@ bool ibus_process_frame(void){
 			}
 		}
 	}
-	return 0;
+	return status;
 }
 
 static void ibus_update(uint8_t* pData)
